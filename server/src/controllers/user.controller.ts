@@ -7,7 +7,11 @@ import { ApiResponse } from "../utils/ApiResponse"
 import { asyncHandler } from "../utils/asyncHandler"
 import { createUserSession } from "../utils/authService"
 import { validateRequest } from "../utils/validateRequest"
-import { loginSchema, registerSchema } from "../utils/validation"
+import {
+  changePasswordSchema,
+  loginSchema,
+  registerSchema,
+} from "../utils/validation"
 import crypto from "crypto"
 import { sendPasswordResetEmail } from "../utils/sendEmail"
 
@@ -163,20 +167,27 @@ export const getAllSessions = asyncHandler<CustomRequest>(async (req, res) => {
     where: { userId },
     orderBy: { createdAt: "desc" },
   })
+  const user = await prisma.user.findUnique({ where: { id: userId } })
 
-  const sessionInfo = sessions.map((session) => ({
-    id: session.id,
-    createdAt: session.createdAt,
-    lastActive: session.createdAt,
-    deviceInfo: {
-      os: session.os,
-      browser: session.browser,
-      deviceType: session.deviceType,
-      location: session.location,
-      ipAddress: session.ip,
+  const sessionInfo = {
+    userMetaData: {
+      passwordChangedAt: user?.passwordChangedAt,
+      isTwoFactorEnabled: user?.isTwoFactorEnabled,
     },
-    isCurrent: session.id === currentSessionId,
-  }))
+    sessions: sessions.map((session) => ({
+      id: session.id,
+      createdAt: session.createdAt,
+      lastActive: session.createdAt,
+      deviceInfo: {
+        os: session.os,
+        browser: session.browser,
+        deviceType: session.deviceType,
+        location: session.location,
+        ipAddress: session.ip,
+      },
+      isCurrent: session.id === currentSessionId,
+    })),
+  }
 
   return res.json(
     new ApiResponse(200, sessionInfo, "Active sessions fetched successfully")
@@ -378,10 +389,54 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   await prisma.user.update({
     where: { email },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, passwordChangedAt: new Date() },
   })
 
   await prisma.passwordResetToken.deleteMany({ where: { email } })
 
   return res.json(new ApiResponse(200, {}, "Password reset successfull"))
+})
+
+export const changePassword = asyncHandler<CustomRequest>(async (req, res) => {
+  const parsedData = validateRequest(changePasswordSchema, req.body)
+
+  const { password, newPassword } = parsedData
+  const currentUserId = req.user?.id
+  if (!currentUserId) throw new ApiError(401, "Unauthorized")
+
+  const user = await prisma.user.findUnique({ where: { id: currentUserId } })
+  if (!user) throw new ApiError(404, "User not found")
+
+  const isCorrectPassword = await comparePassword(password, user?.password!)
+  if (!isCorrectPassword) {
+    throw new ApiError(
+      401,
+      "Current Password is incorrect. password change failed"
+    )
+  }
+
+  const hashNewPass = await hashPassword(newPassword)
+
+  await prisma.user.update({
+    where: { id: user?.id },
+    data: { password: hashNewPass, passwordChangedAt: new Date() },
+  })
+
+  // if password changed then delete all this user session so can login again
+  await prisma.session.deleteMany({
+    where: { userId: user.id },
+  })
+  // clear the cookies for current user
+  res.clearCookie("refreshToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  })
+  res.clearCookie("accessToken", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+  })
+
+  return res.json(new ApiResponse(200, {}, "Password changed successfully"))
 })

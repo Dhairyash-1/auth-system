@@ -8,6 +8,7 @@ import ProtectedRoute from "./components/ProtectedRoute"
 import "react-toastify/dist/ReactToastify.css"
 import "./styles/toastStyles.css"
 import { toast, ToastContainer } from "react-toastify"
+import ChangePassword from "./pages/ChangePassword"
 
 const App = () => {
   return (
@@ -18,6 +19,14 @@ const App = () => {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <ChangePassword />
             </ProtectedRoute>
           }
         />

@@ -28,15 +28,13 @@ const ForgotPasswordPage: React.FC = () => {
   const onSubmit = async (data: RequestPasswordResetFormValues) => {
     try {
       setIsLoading(true)
-      // Here you would implement your password reset request logic
-      console.log("Password reset request for:", data.email)
 
       await requestPasswordReset({ email: data.email })
 
       // Show success message
       setIsEmailSent(true)
     } catch (error: any) {
-      const msg = error.response.data.message
+      const msg = error.response.data.message || "something went wrong"
       toast.error(msg)
       console.error("Password reset request failed:", error)
     } finally {

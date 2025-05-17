@@ -60,3 +60,11 @@ export const resetPassword = async (data: {
 
   return res.data
 }
+export const changePassword = async (data: {
+  password: string
+  newPassword: string
+}) => {
+  const res = await api.post("/user/change-password", data)
+
+  return res.data
+}

@@ -4,6 +4,7 @@ import Button from "../components/Button"
 import { useAuth } from "../context/useAuth"
 import { getAllSessions, logoutUser } from "../api/auth"
 import { toast } from "react-toastify"
+import { timeSince } from "../utils"
 
 interface Session {
   id: string
@@ -18,11 +19,16 @@ interface Session {
   }
   isCurrent: boolean
 }
+interface UserMetaData {
+  passwordChangedAt: Date
+  isTwoFactorEnabled: boolean
+}
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [sessions, setSessions] = useState<Session[]>([])
+  const [userData, setUserData] = useState<UserMetaData>()
   const [logoutSessionId, setLogoutSessionId] = useState<string | null>(null)
   const { user, logout } = useAuth()
 
@@ -31,7 +37,8 @@ const DashboardPage: React.FC = () => {
       try {
         setIsLoading(true)
         const response = await getAllSessions()
-        setSessions(response.data)
+        setSessions(response.data.sessions)
+        setUserData(response.data.userMetaData)
       } catch (error) {
         console.error("Error fetching data:", error)
       } finally {
@@ -394,10 +401,13 @@ const DashboardPage: React.FC = () => {
                         Password
                       </h4>
                       <p className="mt-1 text-sm text-gray-500">
-                        Last changed 30 days ago
+                        Last changed{" "}
+                        {timeSince(
+                          new Date(userData?.passwordChangedAt as Date)
+                        )}
                       </p>
                       <div className="mt-2">
-                        <Link to="/reset-password">
+                        <Link to="/change-password">
                           <Button variant="secondary" size="sm">
                             Change password
                           </Button>
@@ -408,10 +418,20 @@ const DashboardPage: React.FC = () => {
                       <h4 className="text-sm font-medium text-gray-900">
                         Two-factor authentication
                       </h4>
-                      <p className="mt-1 text-sm text-gray-500">Not enabled</p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {userData?.isTwoFactorEnabled
+                          ? "Enabled"
+                          : "Not enabled"}
+                      </p>
                       <div className="mt-2">
-                        <Button variant="secondary" size="sm">
-                          Enable 2FA
+                        <Button
+                          variant="secondary"
+                          disabled={userData?.isTwoFactorEnabled}
+                          size="sm"
+                        >
+                          {userData?.isTwoFactorEnabled
+                            ? "Disable 2FA"
+                            : "Enable 2FA"}
                         </Button>
                       </div>
                     </div>

@@ -1,5 +1,6 @@
 import { Router } from "express"
 import {
+  changePassword,
   getAllSessions,
   getCurrentLoggedInUser,
   githubOauthCallback,
@@ -25,6 +26,7 @@ router.route("/reset-password").post(resetPassword)
 router.route("/logout").post(authMiddleware, logoutUser)
 router.route("/me").get(authMiddleware, getCurrentLoggedInUser)
 router.route("/sessions").get(authMiddleware, getAllSessions)
+router.route("/change-password").post(authMiddleware, changePassword)
 
 // Oauth routes
 
