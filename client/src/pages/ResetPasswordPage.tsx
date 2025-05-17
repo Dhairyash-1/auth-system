@@ -7,6 +7,7 @@ import { passwordResetSchema } from "../utils/validationSchemas"
 import AuthLayout from "../components/AuthLayout"
 import FormInput from "../components/FormInput"
 import Button from "../components/Button"
+import { resetPassword } from "../api/auth"
 
 const ResetPasswordPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
@@ -16,6 +17,7 @@ const ResetPasswordPage: React.FC = () => {
 
   // Get token from URL query params
   const token = searchParams.get("token")
+  const email = searchParams.get("email")
 
   const {
     register,
@@ -30,9 +32,10 @@ const ResetPasswordPage: React.FC = () => {
   })
 
   // Verify token is present
-  if (!token) {
+  if (!token || !email) {
     return (
       <AuthLayout
+        showSocialLogin={false}
         title="Invalid reset link"
         description="This password reset link is invalid or has expired"
       >
@@ -72,8 +75,7 @@ const ResetPasswordPage: React.FC = () => {
       // Here you would implement your password reset logic
       console.log("Password reset data:", { ...data, token })
 
-      // Simulate API call with timeout
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await resetPassword({ token, password: data.password, email })
 
       // Show success message
       setResetSuccess(true)
@@ -87,6 +89,7 @@ const ResetPasswordPage: React.FC = () => {
   if (resetSuccess) {
     return (
       <AuthLayout
+        showSocialLogin={false}
         title="Password reset successful"
         description="Your password has been reset successfully"
       >
@@ -122,6 +125,7 @@ const ResetPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout
+      showSocialLogin={false}
       title="Set new password"
       description="Enter a new password for your account"
     >

@@ -44,3 +44,19 @@ export const getAllSessions = async () => {
 
   return res.data
 }
+
+export const requestPasswordReset = async (data: { email: string }) => {
+  const res = await api.post("/user/forgot-password", data)
+
+  return res.data
+}
+
+export const resetPassword = async (data: {
+  email: string
+  token: string
+  password: string
+}) => {
+  const res = await api.post("/user/reset-password", data)
+
+  return res.data
+}

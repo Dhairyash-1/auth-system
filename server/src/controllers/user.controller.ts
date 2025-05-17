@@ -8,6 +8,8 @@ import { asyncHandler } from "../utils/asyncHandler"
 import { createUserSession } from "../utils/authService"
 import { validateRequest } from "../utils/validateRequest"
 import { loginSchema, registerSchema } from "../utils/validation"
+import crypto from "crypto"
+import { sendPasswordResetEmail } from "../utils/sendEmail"
 
 // register user controller
 export const registerUser = asyncHandler(async (req, res) => {
@@ -310,4 +312,76 @@ export const githubOauthCallback = asyncHandler(async (req, res, next) => {
         .redirect(process.env.FRONTEND_REDIRECT_URL as string)
     }
   )(req, res, next)
+})
+
+// request password reset controller
+
+export const requestPasswordReset = asyncHandler(async (req, res, next) => {
+  const { email } = req.body
+
+  const user = await prisma.user.findUnique({ where: { email } })
+
+  if (user && user.provider !== "email") {
+    throw new ApiError(
+      403,
+      `Please login using ${user.provider}, password reset not allowed.`
+    )
+  }
+
+  if (!user)
+    return res.json(new ApiResponse(200, {}, "Email sent if account exist"))
+
+  const rawToken = crypto.randomBytes(32).toString("hex")
+
+  const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex")
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 15) // 15 min
+
+  await prisma.passwordResetToken.create({
+    data: {
+      email,
+      token: hashedToken,
+      expiresAt,
+    },
+  })
+
+  const resetLink = `${process.env.FRONTEND_REDIRECT_URL}/reset-password?token=${rawToken}&email=${email}`
+
+  await sendPasswordResetEmail({
+    email,
+    name: `${user.firstName} ${user.lastName}`,
+    resetLink,
+  })
+
+  return res.json(
+    new ApiResponse(200, {}, "Reset link sent to email if account exists")
+  )
+})
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { email, token, password } = req.body
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex")
+
+  const resetTokenEntry = await prisma.passwordResetToken.findFirst({
+    where: {
+      email,
+      token: hashedToken,
+      expiresAt: { gte: new Date() },
+    },
+  })
+
+  if (!resetTokenEntry) {
+    throw new ApiError(400, "Token invalid or expired")
+  }
+
+  const hashedPassword = await hashPassword(password)
+
+  await prisma.user.update({
+    where: { email },
+    data: { password: hashedPassword },
+  })
+
+  await prisma.passwordResetToken.deleteMany({ where: { email } })
+
+  return res.json(new ApiResponse(200, {}, "Password reset successfull"))
 })

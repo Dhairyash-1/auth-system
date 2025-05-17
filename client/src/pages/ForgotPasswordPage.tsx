@@ -7,6 +7,8 @@ import { requestPasswordResetSchema } from "../utils/validationSchemas"
 import AuthLayout from "../components/AuthLayout"
 import FormInput from "../components/FormInput"
 import Button from "../components/Button"
+import { requestPasswordReset } from "../api/auth"
+import { toast } from "react-toastify"
 
 const ForgotPasswordPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
@@ -29,12 +31,13 @@ const ForgotPasswordPage: React.FC = () => {
       // Here you would implement your password reset request logic
       console.log("Password reset request for:", data.email)
 
-      // Simulate API call with timeout
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      await requestPasswordReset({ email: data.email })
 
       // Show success message
       setIsEmailSent(true)
-    } catch (error) {
+    } catch (error: any) {
+      const msg = error.response.data.message
+      toast.error(msg)
       console.error("Password reset request failed:", error)
     } finally {
       setIsLoading(false)

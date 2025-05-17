@@ -7,6 +7,8 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  requestPasswordReset,
+  resetPassword,
 } from "../controllers/user.controller"
 import { authMiddleware } from "../middleware/auth.middleware"
 import passport from "passport"
@@ -15,6 +17,8 @@ const router = Router()
 
 router.route("/register").post(registerUser)
 router.route("/login").post(loginUser)
+router.route("/forgot-password").post(requestPasswordReset)
+router.route("/reset-password").post(resetPassword)
 
 // protected routes
 
