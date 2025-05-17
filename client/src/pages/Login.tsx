@@ -1,7 +1,7 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Link, useNavigate, Navigate } from "react-router"
+import { Link, useNavigate, Navigate, useLocation } from "react-router"
 import type { LoginFormValues } from "../utils/validationSchemas"
 import { loginSchema } from "../utils/validationSchemas"
 import AuthLayout from "../components/AuthLayout"
@@ -14,6 +14,7 @@ import { useAuth } from "../context/useAuth"
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   const { isAuthenticated, loading, login } = useAuth()
 
   const {
@@ -32,8 +33,6 @@ const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setIsLoading(true)
-      // Here you would implement your login logic
-      console.log("Login data:", data)
 
       const res = await loginUser({
         email: data.email,
@@ -54,12 +53,22 @@ const LoginPage: React.FC = () => {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const error = params.get("error")
+
+    if (error) {
+      toast.error(error)
+    }
+  }, [location])
+
   if (!loading && isAuthenticated) return <Navigate to={"/"} />
 
   return (
     <AuthLayout
       title="Sign in to your account"
-      description="Or start your 14-day free trial"
+      // description="Or start your 14-day free trial"
     >
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
         <FormInput

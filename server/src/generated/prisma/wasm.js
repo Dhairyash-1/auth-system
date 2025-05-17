@@ -126,6 +126,9 @@ exports.Prisma.UserScalarFieldEnum = {
   firstName: 'firstName',
   lastName: 'lastName',
   password: 'password',
+  provider: 'provider',
+  isTwoFactorEnabled: 'isTwoFactorEnabled',
+  twoFactorSecret: 'twoFactorSecret',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -158,7 +161,11 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-
+exports.AuthProvider = exports.$Enums.AuthProvider = {
+  email: 'email',
+  google: 'google',
+  github: 'github'
+};
 
 exports.Prisma.ModelName = {
   User: 'User',

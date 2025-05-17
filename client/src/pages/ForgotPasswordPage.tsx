@@ -44,6 +44,7 @@ const ForgotPasswordPage: React.FC = () => {
   if (isEmailSent) {
     return (
       <AuthLayout
+        showSocialLogin={false}
         title="Check your email"
         description="We've sent a password reset link to your email address"
       >
@@ -93,6 +94,7 @@ const ForgotPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout
+      showSocialLogin={false}
       title="Reset your password"
       description="Enter your email address and we'll send you a link to reset your password"
     >

@@ -35,8 +35,6 @@ const RegisterPage: React.FC = () => {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       setIsLoading(true)
-      // Here you would implement your registration logic
-      console.log("Registration data:", data)
 
       await registerUser({
         email: data.email,
@@ -45,7 +43,6 @@ const RegisterPage: React.FC = () => {
         lastName: data.lastName,
       })
       toast.success("Registration successful! Please log in to continue.")
-      // Redirect to dashboard or login page after successful registration
       navigate("/login")
     } catch (error: any) {
       const msg =
@@ -62,7 +59,7 @@ const RegisterPage: React.FC = () => {
   return (
     <AuthLayout
       title="Create your account"
-      description="Join thousands of users today"
+      // description="Join thousands of users today"
     >
       <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

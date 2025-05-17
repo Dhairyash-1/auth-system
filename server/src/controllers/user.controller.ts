@@ -1,11 +1,11 @@
+import passport from "passport"
 import prisma from "../generated"
 import { comparePassword, hashPassword } from "../services/hash"
-import { generateAccessAndRefreshToken } from "../services/jwt"
 import { CustomRequest } from "../types"
 import { ApiError } from "../utils/ApiError"
 import { ApiResponse } from "../utils/ApiResponse"
 import { asyncHandler } from "../utils/asyncHandler"
-import { parseDeviceInfo } from "../utils/deviceInfo"
+import { createUserSession } from "../utils/authService"
 import { validateRequest } from "../utils/validateRequest"
 import { loginSchema, registerSchema } from "../utils/validation"
 
@@ -59,6 +59,10 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User does not exist.")
   }
 
+  if (user && user.provider !== "email") {
+    throw new ApiError(403, `Please log in using ${user.provider}.`)
+  }
+
   const isPasswordValid = await comparePassword(password, user.password)
   if (!isPasswordValid) {
     throw new ApiError(401, "Incorrect password.")
@@ -70,30 +74,11 @@ export const loginUser = asyncHandler(async (req, res) => {
     req.ip ||
     ""
 
-  const deviceInfo = parseDeviceInfo(userAgent, ip)
-
-  const session = await prisma.session.create({
-    data: {
-      userId: user.id,
-      userAgent: req.get("User-Agent") || "",
-      ip: deviceInfo.ipAddress,
-      browser: deviceInfo.browser,
-      deviceType: deviceInfo.deviceType,
-      location: deviceInfo.location,
-      os: deviceInfo.os,
-      refreshToken: "", // temp empty, will update in next step
-    },
-  })
-
-  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+  const { accessToken, refreshToken } = await createUserSession(
     user.id,
-    session.id
+    userAgent,
+    ip
   )
-
-  await prisma.session.update({
-    where: { id: session.id },
-    data: { refreshToken },
-  })
 
   const cookieOptions = {
     httpOnly: true,
@@ -115,7 +100,7 @@ export const loginUser = asyncHandler(async (req, res) => {
 
 // logout the user
 
-export const logoutUser = asyncHandler(async (req: CustomRequest, res) => {
+export const logoutUser = asyncHandler<CustomRequest>(async (req, res) => {
   const userId = req?.user?.id
   const currentSessionId = req?.user?.sessionId
   const { sessionId, terminateAllOtherSession } = req.body || {}
@@ -166,7 +151,7 @@ export const logoutUser = asyncHandler(async (req: CustomRequest, res) => {
 
 // get All user session
 
-export const getAllSessions = asyncHandler(async (req: CustomRequest, res) => {
+export const getAllSessions = asyncHandler<CustomRequest>(async (req, res) => {
   const userId = req.user?.id
   const currentSessionId = req.user?.sessionId
 
@@ -198,8 +183,8 @@ export const getAllSessions = asyncHandler(async (req: CustomRequest, res) => {
 
 // getCurrentLoggedInUser
 
-export const getCurrentLoggedInUser = asyncHandler(
-  async (req: CustomRequest, res) => {
+export const getCurrentLoggedInUser = asyncHandler<CustomRequest>(
+  async (req, res) => {
     const email = req?.user?.email
     const id = req?.user?.id
     const sessionId = req?.user?.sessionId
@@ -226,3 +211,103 @@ export const getCurrentLoggedInUser = asyncHandler(
     )
   }
 )
+
+// google Oauth callback
+export const googleOauthCallback = asyncHandler(async (req, res, next) => {
+  passport.authenticate(
+    "google",
+    async (
+      err: Error | null,
+      user: any,
+      info: { message?: string } | undefined
+    ) => {
+      if (err) {
+        console.log("Authentication error:", err)
+        return next(err)
+      }
+
+      if (!user) {
+        console.log("No user returned, info:", info)
+        return res.redirect(
+          `${
+            process.env.FRONTEND_REDIRECT_URL as string
+          }/login?error=${encodeURIComponent(
+            info?.message || "Login Failed using Google"
+          )}`
+        )
+      }
+
+      const userAgent = req.get("User-Agent") || ""
+      const ip =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+        req.ip ||
+        ""
+
+      const { accessToken, refreshToken } = await createUserSession(
+        user.id,
+        userAgent,
+        ip
+      )
+
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      }
+
+      res.cookie("refreshToken", refreshToken, cookieOptions)
+      res.cookie("accessToken", accessToken, cookieOptions)
+
+      res.redirect(process.env.FRONTEND_REDIRECT_URL as string)
+    }
+  )(req, res, next)
+})
+
+// github Oauth callback
+export const githubOauthCallback = asyncHandler(async (req, res, next) => {
+  passport.authenticate(
+    "github",
+    async (
+      err: Error | null,
+      user: any,
+      info: { message?: string } | undefined
+    ) => {
+      if (err) return next(err)
+
+      if (!user) {
+        return res.redirect(
+          `${
+            process.env.FRONTEND_REDIRECT_URL
+          }/login?error=${encodeURIComponent(
+            info?.message || "Login failed using github"
+          )}`
+        )
+      }
+
+      const userAgent = req.get("User-Agent") || ""
+      const ip =
+        (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+        req.ip ||
+        ""
+
+      const { accessToken, refreshToken } = await createUserSession(
+        user.id,
+        userAgent,
+        ip
+      )
+
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
+      }
+
+      res
+        .cookie("refreshToken", refreshToken, cookieOptions)
+        .cookie("accessToken", accessToken, cookieOptions)
+        .redirect(process.env.FRONTEND_REDIRECT_URL as string)
+    }
+  )(req, res, next)
+})
