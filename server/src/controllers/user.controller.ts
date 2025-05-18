@@ -257,7 +257,7 @@ export const googleOauthCallback = asyncHandler(async (req, res, next) => {
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
+        sameSite: "none" as const,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       }
 
@@ -305,7 +305,7 @@ export const githubOauthCallback = asyncHandler(async (req, res, next) => {
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax" as const,
+        sameSite: "none" as const,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       }
 
