@@ -30,7 +30,7 @@ export const loginSchema = z.object({
     .nonempty("Password is required")
     .trim(),
 
-  rememberMe: z.boolean().optional(),
+  rememberMe: z.boolean().optional().default(false),
 })
 
 export const changePasswordSchema = z.object({

@@ -68,3 +68,28 @@ export const changePassword = async (data: {
 
   return res.data
 }
+export const request2FASetup = async () => {
+  const res = await api.post("/user/2fa/setup")
+  return res.data
+}
+
+export const verify2FA = async (data: { token: string; secret: string }) => {
+  const res = await api.post("/user/2fa/verify", data)
+
+  return res.data
+}
+export const disable2FA = async () => {
+  const res = await api.post("/user/2fa/disable")
+
+  return res.data
+}
+
+export const verify2FADuringLogin = async (data: {
+  token: string
+  tempToken: string
+  rememberMe: boolean
+}) => {
+  const res = await api.post("/user/2fa/login", data)
+
+  return res.data
+}

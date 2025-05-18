@@ -39,10 +39,20 @@ const LoginPage: React.FC = () => {
         password: data.password,
         rememberMe: data.rememberMe || false,
       })
-      login(res.data)
-      toast.success("Login successful! Welcome back 😊")
-
-      navigate("/")
+      console.log("res", res)
+      if (res.data?.tempToken) {
+        // first do 2fa
+        navigate("/2fa-verify", {
+          state: {
+            tempToken: res.data?.tempToken,
+            rememberMe: data.rememberMe || false,
+          },
+        })
+      } else {
+        login(res.data)
+        toast.success("Login successful! Welcome back 😊")
+        navigate("/")
+      }
     } catch (error: any) {
       const msg =
         error?.response?.data?.message ||

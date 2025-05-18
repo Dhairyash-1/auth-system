@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     fetchUser()
   }, [])
 
-  const isAuthenticated = !!user
+  const isAuthenticated = !!user && typeof user.id === "string"
 
   const logout = () => {
     setUser(null)

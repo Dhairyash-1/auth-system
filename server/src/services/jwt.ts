@@ -30,6 +30,17 @@ export const generateAccessAndRefreshToken = async (
   return { accessToken, refreshToken }
 }
 
-export const verifyToken = (token: string) => {
-  return jwt.verify(token, JWT_SECRET)
+export const verifyToken = (
+  token: string,
+  tokenSecret: Secret = JWT_SECRET
+) => {
+  return jwt.verify(token, tokenSecret)
+}
+
+export const generateToken = (
+  payload: object,
+  secret: string,
+  expiresIn: jwt.SignOptions["expiresIn"] = "5m"
+) => {
+  return jwt.sign(payload, secret, { expiresIn })
 }

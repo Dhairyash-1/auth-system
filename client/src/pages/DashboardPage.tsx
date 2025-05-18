@@ -2,7 +2,12 @@ import React, { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router"
 import Button from "../components/Button"
 import { useAuth } from "../context/useAuth"
-import { getAllSessions, logoutUser } from "../api/auth"
+import {
+  disable2FA,
+  getAllSessions,
+  logoutUser,
+  request2FASetup,
+} from "../api/auth"
 import { toast } from "react-toastify"
 import { timeSince } from "../utils"
 
@@ -28,7 +33,7 @@ const DashboardPage: React.FC = () => {
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(true)
   const [sessions, setSessions] = useState<Session[]>([])
-  const [userData, setUserData] = useState<UserMetaData>()
+  const [userData, setUserData] = useState<UserMetaData | null>(null)
   const [logoutSessionId, setLogoutSessionId] = useState<string | null>(null)
   const { user, logout } = useAuth()
 
@@ -110,6 +115,28 @@ const DashboardPage: React.FC = () => {
       console.error("Error logging out other sessions:", error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleTwoFactorRequest = async () => {
+    try {
+      if (!userData?.isTwoFactorEnabled) {
+        const data = await request2FASetup()
+        const { qrcodeUrl, secret } = data?.data
+        toast.success("2FA setup initiated. Scan the QR code.")
+        navigate("/enable-2fa", {
+          state: { otpauthUrl: qrcodeUrl, base32Secret: secret },
+        })
+      } else {
+        await disable2FA()
+        setUserData((prev) =>
+          prev ? { ...prev, isTwoFactorEnabled: false } : prev
+        )
+        toast.success("2FA disabled successfully.")
+      }
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.")
+      console.error("2FA request error:", error)
     }
   }
 
@@ -426,7 +453,7 @@ const DashboardPage: React.FC = () => {
                       <div className="mt-2">
                         <Button
                           variant="secondary"
-                          disabled={userData?.isTwoFactorEnabled}
+                          onClick={handleTwoFactorRequest}
                           size="sm"
                         >
                           {userData?.isTwoFactorEnabled

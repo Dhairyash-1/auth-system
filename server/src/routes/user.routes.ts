@@ -1,6 +1,8 @@
 import { Router } from "express"
 import {
   changePassword,
+  disable2FA,
+  generate2FASecret,
   getAllSessions,
   getCurrentLoggedInUser,
   githubOauthCallback,
@@ -10,6 +12,8 @@ import {
   registerUser,
   requestPasswordReset,
   resetPassword,
+  verify2FA,
+  verify2FADuringLogin,
 } from "../controllers/user.controller"
 import { authMiddleware } from "../middleware/auth.middleware"
 import passport from "passport"
@@ -43,5 +47,14 @@ router.get(
   passport.authenticate("github", { scope: ["user:email"] })
 )
 router.get("/github/callback", githubOauthCallback)
+
+// 2FA setup
+
+router.route("/2fa/setup").post(authMiddleware, generate2FASecret)
+router.route("/2fa/verify").post(authMiddleware, verify2FA)
+router.route("/2fa/disable").post(authMiddleware, disable2FA)
+
+// while login 2fa verification
+router.route("/2fa/login").post(verify2FADuringLogin)
 
 export default router

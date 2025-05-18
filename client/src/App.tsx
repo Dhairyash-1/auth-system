@@ -9,6 +9,8 @@ import "react-toastify/dist/ReactToastify.css"
 import "./styles/toastStyles.css"
 import { toast, ToastContainer } from "react-toastify"
 import ChangePassword from "./pages/ChangePassword"
+import Enable2FAPage from "./pages/Enable2FAPage"
+import TwoFAVerificationPage from "./pages/TwoFAVerificationPage"
 
 const App = () => {
   return (
@@ -30,6 +32,15 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/enable-2fa"
+          element={
+            <ProtectedRoute>
+              <Enable2FAPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/2fa-verify" element={<TwoFAVerificationPage />} />
         <Route path="/login" Component={LoginPage} />
         <Route path="/register" Component={RegisterPage} />
         <Route path="/forgot-password" Component={ForgotPasswordPage} />

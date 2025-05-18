@@ -1,4 +1,6 @@
 import passport from "passport"
+import speakeasy from "speakeasy"
+import qrcode from "qrcode"
 import prisma from "../generated"
 import { comparePassword, hashPassword } from "../services/hash"
 import { CustomRequest } from "../types"
@@ -14,6 +16,9 @@ import {
 } from "../utils/validation"
 import crypto from "crypto"
 import { sendPasswordResetEmail } from "../utils/sendEmail"
+import { generateToken, verifyToken } from "../services/jwt"
+import { JwtPayload } from "jsonwebtoken"
+import { handleLoginSuccess } from "../utils/handleLoginSuccess"
 
 // register user controller
 export const registerUser = asyncHandler(async (req, res) => {
@@ -55,7 +60,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 // login user controller
 export const loginUser = asyncHandler(async (req, res) => {
   const parsedData = validateRequest(loginSchema, req.body)
-  const { email, password, rememberMe } = parsedData
+  const { email, password, rememberMe = false } = parsedData
 
   const user = await prisma.user.findUnique({
     where: { email },
@@ -74,34 +79,17 @@ export const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Incorrect password.")
   }
 
-  const userAgent = req.get("User-Agent") || ""
-  const ip =
-    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-    req.ip ||
-    ""
-
-  const { accessToken, refreshToken } = await createUserSession(
-    user.id,
-    userAgent,
-    ip
-  )
-
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}),
+  if (user.isTwoFactorEnabled && user.twoFactorSecret) {
+    const tempToken = generateToken(
+      { id: user.id },
+      process.env.TEMP_2FA_SECRET!,
+      "5m"
+    )
+    return res.json(new ApiResponse(200, { tempToken }, "2FA is required"))
   }
 
-  const { password: _, ...userWithoutPassword } = user
-
-  return res
-    .status(200)
-    .cookie("refreshToken", refreshToken, cookieOptions)
-    .cookie("accessToken", accessToken, cookieOptions)
-    .json(
-      new ApiResponse(200, userWithoutPassword, "User LoggedIn Successfully")
-    )
+  // Manages session creation, token issuance, cookie setup, and final login response
+  await handleLoginSuccess({ user, rememberMe, req, res })
 })
 
 // logout the user
@@ -439,4 +427,101 @@ export const changePassword = asyncHandler<CustomRequest>(async (req, res) => {
   })
 
   return res.json(new ApiResponse(200, {}, "Password changed successfully"))
+})
+
+export const generate2FASecret = asyncHandler<CustomRequest>(
+  async (req, res) => {
+    const userEmail = req.user?.email
+
+    const secret = speakeasy.generateSecret({
+      name: `AuthSystem:${userEmail!}`,
+      issuer: "AuthSystem",
+    })
+
+    const qrcodeUrl = await qrcode.toDataURL(secret.otpauth_url as string)
+
+    return res.json(
+      new ApiResponse(
+        200,
+        { qrcodeUrl, secret: secret.base32 },
+        "2FA secret generated successfully"
+      )
+    )
+  }
+)
+
+export const verify2FA = asyncHandler<CustomRequest>(async (req, res) => {
+  const { token, secret } = req.body
+
+  if (!token || !secret) {
+    throw new ApiError(400, "Token and Secret is required for 2FA verification")
+  }
+
+  const isValid = speakeasy.totp.verify({
+    secret,
+    encoding: "base32",
+    token,
+    window: 1,
+  })
+
+  if (!isValid) {
+    throw new ApiError(400, "Invalid verification code")
+  }
+
+  await prisma.user.update({
+    where: { id: req.user?.id },
+    data: {
+      isTwoFactorEnabled: true,
+      twoFactorSecret: secret,
+    },
+  })
+
+  res.json(new ApiResponse(200, {}, "2FA enabled successfully"))
+})
+
+export const verify2FADuringLogin = asyncHandler(async (req, res) => {
+  const { token: userOtp, tempToken, rememberMe } = req.body
+
+  if (!userOtp) throw new ApiError(400, "TOTP required for 2FA verification")
+  if (!tempToken) throw new ApiError(400, "Temp token not found so 2FA failed")
+
+  const payload = verifyToken(
+    tempToken,
+    process.env.TEMP_2FA_SECRET
+  ) as JwtPayload
+
+  if (!payload.id) throw new ApiError(401, "Invaild temp token")
+
+  const user = await prisma.user.findUnique({ where: { id: payload.id } })
+
+  if (!user || !user.isTwoFactorEnabled || !user.twoFactorSecret) {
+    throw new ApiError(400, "Invalid 2FA state")
+  }
+
+  const isValid = speakeasy.totp.verify({
+    secret: user.twoFactorSecret,
+    encoding: "base32",
+    token: userOtp,
+    window: 1,
+  })
+
+  if (!isValid) {
+    throw new ApiError(401, "Invalid 2FA token")
+  }
+
+  // Manages session creation, token issuance, cookie setup, and final login response
+
+  await handleLoginSuccess({ user, rememberMe: false, req, res })
+})
+
+export const disable2FA = asyncHandler<CustomRequest>(async (req, res) => {
+  await prisma.user.update({
+    where: { id: req.user?.id },
+    data: {
+      isTwoFactorEnabled: false,
+      twoFactorSecret: "",
+    },
+  })
+
+  return res.json(new ApiResponse(200, {}, "2FA is diabled successfully"))
 })

@@ -96,3 +96,12 @@ export const passwordChangeSchema = z
   })
 
 export type PasswordChangeFormValues = z.infer<typeof passwordChangeSchema>
+
+export const tokenSchema = z.object({
+  token: z
+    .string()
+    .length(6, "Code must be exactly 6 digits")
+    .regex(/^\d+$/, "Code must contain only numbers"),
+})
+
+export type TokenFormValue = z.infer<typeof tokenSchema>
