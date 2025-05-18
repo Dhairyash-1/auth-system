@@ -16,7 +16,11 @@ import {
 } from "../utils/validation"
 import crypto from "crypto"
 import { sendPasswordResetEmail } from "../utils/sendEmail"
-import { generateToken, verifyToken } from "../services/jwt"
+import {
+  generateAccessAndRefreshToken,
+  generateToken,
+  verifyToken,
+} from "../services/jwt"
 import { JwtPayload } from "jsonwebtoken"
 import { handleLoginSuccess } from "../utils/handleLoginSuccess"
 
@@ -524,4 +528,62 @@ export const disable2FA = asyncHandler<CustomRequest>(async (req, res) => {
   })
 
   return res.json(new ApiResponse(200, {}, "2FA is diabled successfully"))
+})
+
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Unauthorized request")
+  }
+
+  const decodedToken = verifyToken(
+    incomingRefreshToken,
+    process.env.JWT_SECRET!
+  ) as { id: string; sessionId: string }
+
+  const session = await prisma.session.findUnique({
+    where: {
+      id: decodedToken?.sessionId,
+    },
+  })
+
+  if (!session || session.userId !== decodedToken.id) {
+    throw new ApiError(401, "Session is invalid or does not belong to user")
+  }
+
+  if (incomingRefreshToken !== session.refreshToken) {
+    throw new ApiError(401, "refreshToken is expired or used")
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    decodedToken.id,
+    decodedToken.sessionId
+  )
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+  }
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: {
+      refreshToken,
+    },
+  })
+
+  return res
+    .status(200)
+    .cookie("refreshToken", refreshToken, cookieOptions)
+    .cookie("accessToken", accessToken, cookieOptions)
+    .json(
+      new ApiResponse(
+        200,
+        { accessToken, refreshToken },
+        "AccessToken refreshed"
+      )
+    )
 })

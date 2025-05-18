@@ -49,8 +49,12 @@ export const authMiddleware = asyncHandler(
 
       req.user = { id: user.id, email: user.email, sessionId: session.id }
       next()
-    } catch (err) {
-      throw new ApiError(401, "Invalid or expired token")
+    } catch (err: any) {
+      if (err.name === "TokenExpiredError") {
+        throw new ApiError(401, "Token expired", [], "TOKEN_EXPIRED")
+      } else {
+        throw new ApiError(401, "Invalid or expired token")
+      }
     }
   }
 )

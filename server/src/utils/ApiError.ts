@@ -3,11 +3,13 @@ class ApiError extends Error {
   data: any
   success: boolean
   errors: string[]
+  code?: string
 
   constructor(
     statusCode: number,
     message: string = "Something went wrong",
     errors: string[] = [],
+    code?: string,
     stack?: string
   ) {
     super(message)
@@ -17,6 +19,7 @@ class ApiError extends Error {
     this.message = message
     this.success = false
     this.errors = errors
+    if (code) this.code = code
 
     if (stack) {
       this.stack = stack

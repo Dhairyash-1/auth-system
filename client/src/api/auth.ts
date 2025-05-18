@@ -93,3 +93,9 @@ export const verify2FADuringLogin = async (data: {
 
   return res.data
 }
+
+export const refreshAccessToken = async () => {
+  const res = await api.post("/user/refresh-token")
+
+  return res.data
+}

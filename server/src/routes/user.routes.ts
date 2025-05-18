@@ -9,6 +9,7 @@ import {
   googleOauthCallback,
   loginUser,
   logoutUser,
+  refreshAccessToken,
   registerUser,
   requestPasswordReset,
   resetPassword,
@@ -33,6 +34,7 @@ router
   .route("/forgot-password")
   .post(passwordResetLimiter, requestPasswordReset)
 router.route("/reset-password").post(passwordResetLimiter, resetPassword)
+router.route("/refresh-token").post(refreshAccessToken)
 
 // protected routes
 
