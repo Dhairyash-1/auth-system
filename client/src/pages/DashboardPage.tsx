@@ -67,7 +67,6 @@ const DashboardPage: React.FC = () => {
       await logoutUser({})
       // clear the context
       logout()
-
       navigate("/login")
     } catch (error: any) {
       const msg =

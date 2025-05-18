@@ -17,13 +17,22 @@ import {
 } from "../controllers/user.controller"
 import { authMiddleware } from "../middleware/auth.middleware"
 import passport from "passport"
+import {
+  globalLimiter,
+  loginLimiter,
+  passwordResetLimiter,
+} from "../middleware/rateLimiters"
 
 const router = Router()
 
+router.use(globalLimiter)
+
 router.route("/register").post(registerUser)
-router.route("/login").post(loginUser)
-router.route("/forgot-password").post(requestPasswordReset)
-router.route("/reset-password").post(resetPassword)
+router.route("/login").post(loginLimiter, loginUser)
+router
+  .route("/forgot-password")
+  .post(passwordResetLimiter, requestPasswordReset)
+router.route("/reset-password").post(passwordResetLimiter, resetPassword)
 
 // protected routes
 
@@ -55,6 +64,6 @@ router.route("/2fa/verify").post(authMiddleware, verify2FA)
 router.route("/2fa/disable").post(authMiddleware, disable2FA)
 
 // while login 2fa verification
-router.route("/2fa/login").post(verify2FADuringLogin)
+router.route("/2fa/login").post(loginLimiter, verify2FADuringLogin)
 
 export default router
