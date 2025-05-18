@@ -67,7 +67,10 @@ const TwoFAVerificationPage = () => {
     }
   }
 
-  if (!state?.tempToken || !state?.rememberMe) {
+  if (
+    !state?.tempToken ||
+    (state.rememberMe !== true && state.rememberMe !== false)
+  ) {
     return <Navigate to={"/login"} />
   }
 
