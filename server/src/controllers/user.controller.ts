@@ -15,6 +15,7 @@ import {
   registerSchema,
 } from "../utils/validation"
 import crypto from "crypto"
+
 import { sendPasswordResetEmail } from "../utils/sendEmail"
 import {
   generateAccessAndRefreshToken,
@@ -257,10 +258,7 @@ export const googleOauthCallback = asyncHandler(async (req, res, next) => {
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite:
-          process.env.NODE_ENV === "production"
-            ? ("none" as const)
-            : ("lax" as const),
+        sameSite: "lax" as const,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       }
 
@@ -308,10 +306,7 @@ export const githubOauthCallback = asyncHandler(async (req, res, next) => {
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite:
-          process.env.NODE_ENV === "production"
-            ? ("none" as const)
-            : ("lax" as const),
+        sameSite: "lax" as const,
         maxAge: 30 * 24 * 60 * 60 * 1000,
       }
 

@@ -11,7 +11,7 @@ interface FailedRequest {
 }
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_SERVER_URL,
+  baseURL: "/api/v1",
   withCredentials: true,
 })
 let isRefreshing = false

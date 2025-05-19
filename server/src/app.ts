@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express"
+import path from "path"
 import cookieParser from "cookie-parser"
 import cors from "cors"
 import helmet from "helmet"
@@ -20,11 +21,16 @@ app.use(
     credentials: true,
   })
 )
-
 import userRouter from "./routes/user.routes"
 
 app.use("/api/v1/user", userRouter)
+// 2. Then serve static files
+app.use(express.static(path.join(__dirname, "../../client/dist")))
 
+// 3. Then catch all other requests except API ones
+app.get(/^\/(?!api).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, "../../client/dist", "index.html"))
+})
 app.use(errorHandler)
 
 export const startServer = () => {

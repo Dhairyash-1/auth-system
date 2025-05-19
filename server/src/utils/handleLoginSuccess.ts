@@ -1,7 +1,7 @@
 import { Response } from "express"
 import { ApiResponse } from "../utils/ApiResponse"
 import { createUserSession } from "./authService"
-import { User } from "../generated/prisma"
+import { User } from "@prisma/client"
 
 type HandleLoginOptions = {
   user: User
@@ -31,10 +31,7 @@ export const handleLoginSuccess = async ({
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite:
-      process.env.NODE_ENV === "production"
-        ? ("none" as const)
-        : ("lax" as const),
+    sameSite: "lax" as const,
     ...(rememberMe ? { maxAge: 30 * 24 * 60 * 60 * 1000 } : {}), // 30 days
   }
 
