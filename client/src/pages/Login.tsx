@@ -15,7 +15,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated, loading, login } = useAuth()
+  const { isAuthenticated, loading, refreshSession } = useAuth()
 
   const {
     register,
@@ -49,7 +49,7 @@ const LoginPage: React.FC = () => {
           },
         })
       } else {
-        login(res.data)
+        refreshSession()
         toast.success("Login successful! Welcome back 😊")
         navigate("/")
       }

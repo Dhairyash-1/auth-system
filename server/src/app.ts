@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express"
+import express from "express"
 import path from "path"
 import cookieParser from "cookie-parser"
 import cors from "cors"
@@ -17,17 +17,16 @@ app.use(passport.initialize())
 
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: process.env.CORS_ORIGIN,
     credentials: true,
   })
 )
 import userRouter from "./routes/user.routes"
 
 app.use("/api/v1/user", userRouter)
-// 2. Then serve static files
+
 app.use(express.static(path.join(__dirname, "../../client/dist")))
 
-// 3. Then catch all other requests except API ones
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../../client/dist", "index.html"))
 })

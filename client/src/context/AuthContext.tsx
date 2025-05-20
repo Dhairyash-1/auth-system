@@ -4,7 +4,6 @@ import React, {
   useEffect,
   type ReactNode,
 } from "react"
-import api from "../api/axios"
 import { getCurrentUserSession } from "../api/auth"
 
 interface User {
@@ -21,7 +20,7 @@ interface AuthContextType {
   loading: boolean
   error: Error | null
   setUser: React.Dispatch<React.SetStateAction<User | null>>
-  login: (userData: User) => void
+  refreshSession: () => Promise<void>
   logout: () => void
 }
 
@@ -37,28 +36,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
-  const login = (userData: User) => {
-    setUser(userData)
-  }
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true)
-        const response = await getCurrentUserSession()
-        setUser(response.data)
-        setError(null)
-      } catch (err) {
-        setUser(null)
-        setError(err instanceof Error ? err : new Error("Unknown error"))
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchUser()
-  }, [])
-
   const isAuthenticated = !!user && typeof user.id === "string"
+
+  const refreshSession = async () => {
+    try {
+      setLoading(true)
+      const res = await getCurrentUserSession()
+      setUser(res.data)
+      setError(null)
+    } catch (err) {
+      setUser(null)
+      setError(err instanceof Error ? err : new Error("Unknown error"))
+    } finally {
+      setLoading(false)
+    }
+  }
+  useEffect(() => {
+    console.log("🔥 getCurrentUserSession API called")
+    refreshSession()
+  }, [])
 
   const logout = () => {
     setUser(null)
@@ -66,9 +62,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated, loading, error, setUser, logout, login }}
+      value={{
+        user,
+        isAuthenticated,
+        loading,
+        error,
+        setUser,
+        logout,
+        refreshSession,
+      }}
     >
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   )
 }

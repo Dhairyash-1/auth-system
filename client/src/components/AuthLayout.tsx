@@ -15,10 +15,10 @@ const AuthLayout: React.FC<AuthLayoutProps> = ({
   showSocialLogin = true,
 }) => {
   const handleGoogleLogin = () => {
-    window.location.href = `/api/v1/user/google`
+    window.location.href = `${import.meta.env.VITE_SERVER_URL}/user/google`
   }
   const handleGithubLogin = () => {
-    window.location.href = `/api/v1/user/github`
+    window.location.href = `${import.meta.env.VITE_SERVER_URL}/user/github`
   }
 
   return (
